@@ -6742,13 +6742,98 @@ class ModelRef:
         """
         return sorted(self.vars(), key=lambda v: str(v))
 
-
 def evaluate(t):
     """Evaluates the given term (assuming it is constant!)"""
     s = Solver()
     s.check()
     m = s.model()
     return m[t]
+
+class ProofRef:
+    """Proof of the unsatisfiability of a problem (aka system of constraints)."""
+
+    def __init__(self, solver):
+        assert solver is not None
+        self.solver = solver
+
+    def __del__(self):
+        if self.solver is not None:
+            self.solver = None
+
+    def __repr__(self):
+        return "sorry"
+        # var_vals = [(str(v), self[v]) for v in self.decls()]
+        # inner = ", ".join(
+        #     v + " = " + str(val) for v, val in sorted(var_vals, key=lambda a: a[0])
+        # )
+        # return "[" + inner + "]"
+
+    def __len__(self):
+        """Return the number of proof steps in the proof `self`.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, f(x) != x)
+        >>> s.check()
+        sat
+        >>> m = s.model()
+        >>> len(m)
+        2
+        """
+        return len(self.decls())
+
+    def __getitem__(self, idx):
+        """If `idx` is an integer,
+        then the declaration at position `idx` in the model `self` is returned.
+        If `idx` is a declaration, then the actual interpretation is returned.
+
+        The elements can be retrieved using position or the actual declaration.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, x < 2, f(x) == 0)
+        >>> s.check()
+        sat
+        >>> m = s.model()
+        >>> m.decls()
+        [f, x]
+        >>> len(m)
+        2
+        >>> m[0]
+        f
+        >>> m[1]
+        x
+        >>> m[x]
+        1
+        """
+        if _is_int(idx):
+            return self.decls()[idx]
+        if isinstance(idx, ExprRef):
+            return self.eval(idx)
+        if isinstance(idx, SortRef):
+            unimplemented()
+        if debugging():
+            _assert(False, "Integer, SMT declaration, or SMT constant expected")
+        return None
+
+    def decls(self):
+        """Return a list with all symbols that have an interpretation in the
+        model `self`.
+
+        >>> f = Function('f', IntSort(), IntSort())
+        >>> x = Int('x')
+        >>> s = Solver()
+        >>> s.add(x > 0, x < 2, f(x) == 0)
+        >>> s.check()
+        sat
+        >>> m = s.model()
+        >>> m.decls()
+        [f, x]
+        """
+        return sorted(self.vars(), key=lambda v: str(v))
+
 
 
 def simplify(a):
