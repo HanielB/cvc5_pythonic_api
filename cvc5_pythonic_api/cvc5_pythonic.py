@@ -6209,6 +6209,7 @@ class Solver(object):
         a proof is not available (e.g., last `check()` does not return unsat).
 
         >>> s = Solver()
+        >>> s.set('produce-proofs','true')
         >>> a = Int('a')
         >>> s.add(a + 2 == 0)
         >>> s.add(a == 0)
