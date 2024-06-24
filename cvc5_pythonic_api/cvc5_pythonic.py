@@ -6211,12 +6211,24 @@ class Solver(object):
         >>> s = Solver()
         >>> a = Int('a')
         >>> s.add(a + 2 == 0)
+        >>> s.add(a == 0)
         >>> s.check()
-        sat
-        >>> s.model()
-        [a = -2]
+        unsat
+        >>> s.proof()
+        (SCOPE: Not(And(a + 2 == 0, a == 0)),
+          (SCOPE: Not(And(a + 2 == 0, a == 0)),
+           [a + 2 == 0, a == 0],
+           (EQ_RESOLVE: False,
+            (ASSUME: a == 0, [a == 0]),
+            (MACRO_SR_EQ_INTRO: (a == 0) == False,
+             [a == 0, 7, 12],
+             (EQ_RESOLVE: a == -2,
+              (ASSUME: a + 2 == 0, [a + 2 == 0]),
+              (MACRO_SR_EQ_INTRO: (a + 2 == 0) == (a == -2),
+               [a + 2 == 0, 7, 12]))))))
         """
-        return ProofRef(self)
+        p = self.solver.getProof()[0]
+        return ProofRef(self, p)
 
     def assertions(self):
         """Return an AST vector containing all added constraints.
@@ -6766,33 +6778,39 @@ def evaluate(t):
     return m[t]
 
 class ProofRef:
-    """Proof of the unsatisfiability of a problem (aka system of constraints)."""
-
-    def __init__(self, solver):
-        assert solver is not None
+    """A proofs tree where every proof reference corresponds to the
+    root step of a proof.  The branches of the root step are the
+    premises of the step."""
+    def __init__(self, solver, proof):
+        self.proof = proof
         self.solver = solver
-        # TODO populate internal stuff here from solver
 
     def __del__(self):
         if self.solver is not None:
             self.solver = None
 
     def __repr__(self):
-        return "sorry"
-        # var_vals = [(str(v), self[v]) for v in self.decls()]
-        # inner = ", ".join(
-        #     v + " = " + str(val) for v, val in sorted(var_vals, key=lambda a: a[0])
-        # )
-        # return "[" + inner + "]"
+      return obj_to_string(self)
 
     def getRule(self):
-        return ""
+        """Returns the proof rule used by the root step of the proof."""
+        return self.proof.getRule()
 
-    def
+    def getResult(self):
+        """Returns the conclusion of the root step of the proof."""
+        return _to_expr_ref(self.proof.getResult(), Context(self.solver))
 
+    def getChildren(self):
+        """Returns the premises, i.e., proofs themselvels, of the root step of
+        the proof."""
+        children = self.proof.getChildren()
+        return [ProofRef(self.solver, cp) for cp in children]
 
-
-
+    def getArguments(self):
+        """Returns the arguments of the root step of the proof as a list of
+        expressions."""
+        args = self.proof.getArguments()
+        return [_to_expr_ref(a, Context(self.solver)) for a in args]
 
 def simplify(a):
     """Simplify the expression `a`.
